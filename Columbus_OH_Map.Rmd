@@ -1,0 +1,62 @@
+
+---
+title: "Untitled"
+author: "Tate Green"
+date: "4/8/2019"
+output: html_document
+---
+```{r setup, include=FALSE, echo=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(sf)
+library(fs)
+library(ggthemes)
+library(gt)
+library(tidyverse)
+library(gganimate)
+library(gapminder)
+library(lubridate)
+```
+
+```{r, echo=FALSE, message=FALSE, warning= FALSE}
+
+Columbus <- read_rds(url("https://stacks.stanford.edu/file/druid:tr137st9964/tr137st9964_oh_columbus_2019_02_25.rds"))
+## Got the url for the Santa Ana data from the Standford Open Policing ## site and loaded it in using read_rds
+
+download.file(url = "https://stacks.stanford.edu/file/druid:tr137st9964/tr137st9964_oh_columbus_shapefiles_2019_02_25.tgz", destfile = "shapes2.tgz", 
+              quiet = TRUE)
+## using download.file  i inserted the url for the shapesfile data and ## then loaded it into my system
+
+untar("shapes2.tgz")
+## we use the untar function to get the shapes data and unzip the shapes ## data file
+shapes_data2 <- read_sf("oh_columbus_shapefiles/shapes.shp")
+## We using read_sf to read the shapes data into what I called 
+## shapes_data2
+file_delete(c("shapes2.tgz", "oh_columbus_shapefiles"))
+## delete files to make everything run smoother
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning= FALSE}
+arrests_oh <- Columbus %>% 
+  filter(arrest_made) %>%
+  filter(reason_for_stop == "Equipment Violation") %>%
+  filter(!is.na(lat)) %>%
+  filter(!is.na(lng)) %>%
+  mutate(time = hour(time))
+## first we use the columbus data and filter for arrests made and then ##filter out to only look at equipment violations as the reason for the ##stop within the arrest.  Then to filter out the data that is not ##available we can use filter again and the ! is.na() function for ##latitude and longitude.  To make the graph animated we may also use ##the mutate function after this in order to have the graph move by the ##hour.  
+citation_locations <- st_as_sf(arrests_oh, 
+                             coords = c("lng", "lat"), 
+                             crs = 4326) 
+## to plot the shapes data we first use the st_as_sf function to plot ##the data points we are looking for and then read that into geom_sf()
+ggplot(data = shapes_data2) +
+  geom_sf() +
+  geom_sf(data = citation_locations)+
+  theme_map() +
+  labs(title = "Equipment Violation Arrests by Hour",
+       subtitle = "Columbus, OH",
+       caption = "Source: Stanford Open Policing Project")+
+  theme(legend.position = c(2.0, 0.5)) +
+  transition_manual(time)
+## to plot the shapes data we first use the st_as_sf function to plot ##the data points we are looking for and then read that into geom_sf()
+##function but first we use ggplot and put in the data as shapes_data2 ##and finally add labs to create a better more understandable graph with ##title subtitle and a source as well as the transition_manual with time ##to animate the graph to move by the hour.  The final product is a ##moving graph of Columbus, Ohio that shows the equipment violation ##arrests by the hour on a map.
